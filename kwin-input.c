@@ -78,6 +78,8 @@ static xkb_keysym_t keysym_from(const char *name) {
   for (size_t i = 0; i < sizeof aliases / sizeof *aliases; i++)
     if (strcasecmp(name, aliases[i].alias) == 0)
       return xkb_keysym_from_name(aliases[i].name, XKB_KEYSYM_NO_FLAGS);
+  if (name[0] == '0' && (name[1] == 'x' || name[1] == 'X') && name[2])
+    return (xkb_keysym_t)strtoul(name, NULL, 16);  // numeric keysym
   xkb_keysym_t sym = xkb_keysym_from_name(name, XKB_KEYSYM_NO_FLAGS);
   if (sym == XKB_KEY_NoSymbol)
     sym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
