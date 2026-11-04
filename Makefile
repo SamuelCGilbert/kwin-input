@@ -1,9 +1,9 @@
 PREFIX ?= $(HOME)/.local/opt/kwin-input
 CFLAGS ?= -O2 -Wall -Wextra
-PKGS = wayland-client xkbcommon
+PKGS = wayland-client xkbcommon gio-2.0 gio-unix-2.0
 
-kwin-input: kwin-input.c fake-input-client-protocol.h fake-input-protocol.c
-	$(CC) $(CFLAGS) -o $@ kwin-input.c fake-input-protocol.c $$(pkg-config --cflags --libs $(PKGS))
+kwin-input: kwin-input.c kwin-query.c kwin-query.h fake-input-client-protocol.h fake-input-protocol.c
+	$(CC) $(CFLAGS) -o $@ kwin-input.c kwin-query.c fake-input-protocol.c -lpthread $$(pkg-config --cflags --libs $(PKGS))
 
 fake-input-client-protocol.h: fake-input.xml
 	wayland-scanner client-header $< $@

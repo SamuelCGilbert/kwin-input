@@ -17,6 +17,10 @@
 //   moveby DX DY        relative pointer motion
 //   scroll DY [DX]      wheel steps (positive = down / right)
 //   sleep MS
+//   capture X Y W H FILE  screenshot of a logical area at native resolution,
+//                       raw BGRA written to FILE, prints "width height stride format"
+//   pointer             prints the pointer position "x y" (logical)
+//   outputs             prints "name x y w h scale;..." (logical)
 //   -                   read commands from stdin, one per line (prints "ok")
 #define _GNU_SOURCE
 #include <ctype.h>
@@ -32,11 +36,13 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "fake-input-client-protocol.h"
+#include "kwin-query.h"
 
 static struct org_kde_kwin_fake_input *fake;
 static uint32_t fake_version;
 static struct wl_display *display;
 static int delay_ms = 2;
+static char reply_buf[8192];  // data returned by query commands
 
 static void sleep_ms(int ms) {
   if (ms <= 0) return;
@@ -192,8 +198,9 @@ static bool button(const char *name, bool press, bool release) {
 }
 
 static bool is_command(const char *s) {
-  static const char *cmds[] = {"key", "keydown", "keyup", "type", "click", "mousedown",
-                               "mouseup", "move", "moveby", "scroll", "sleep"};
+  static const char *cmds[] = {"key",  "keydown", "keyup",  "type",    "click",   "mousedown",
+                               "mouseup", "move", "moveby", "scroll", "sleep", "capture",
+                               "pointer", "outputs"};
   for (size_t i = 0; i < sizeof cmds / sizeof *cmds; i++)
     if (!strcmp(s, cmds[i])) return true;
   return false;
@@ -255,6 +262,13 @@ static int run(int argc, char **args) {
     return used;
   }
   if (!strcmp(cmd, "sleep")) { NEED(1); sleep_ms(atoi(args[1])); return 2; }
+  if (!strcmp(cmd, "capture")) {
+    NEED(5);
+    return kq_capture(atoi(args[1]), atoi(args[2]), atoi(args[3]), atoi(args[4]), args[5],
+                      reply_buf, sizeof reply_buf) == 0 ? 6 : -1;
+  }
+  if (!strcmp(cmd, "pointer")) return kq_pointer(reply_buf, sizeof reply_buf) == 0 ? 1 : -1;
+  if (!strcmp(cmd, "outputs")) return kq_outputs(reply_buf, sizeof reply_buf) == 0 ? 1 : -1;
   fprintf(stderr, "kwin-input: unknown command '%s'\n", cmd);
   return -1;
 }
@@ -332,7 +346,9 @@ int main(int argc, char **argv) {
         if (used < 0) { ok = false; break; }
         j += used;
       }
-      printf(ok ? "ok\n" : "error\n");
+      if (ok && reply_buf[0]) printf("ok %s\n", reply_buf);
+      else printf(ok ? "ok\n" : "error\n");
+      reply_buf[0] = '\0';
       fflush(stdout);
     }
     free(line);
@@ -340,6 +356,7 @@ int main(int argc, char **argv) {
     while (i < argc) {
       int used = run(argc - i, argv + i);
       if (used < 0) { status = 1; break; }
+      if (reply_buf[0]) { printf("%s\n", reply_buf); reply_buf[0] = '\0'; }
       i += used;
     }
   }
