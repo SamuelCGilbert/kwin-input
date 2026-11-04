@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=kwin-input
+Comment=Lets kwin-input send keyboard and mouse input on KDE Plasma Wayland
+Exec=@BIN@
+NoDisplay=true
+X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input
