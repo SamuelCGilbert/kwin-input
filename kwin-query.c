@@ -212,3 +212,74 @@ int kq_outputs(char *reply, size_t reply_len) {
   g_free(r);
   return 0;
 }
+
+// --- Input monitor (AutoKey KWin bridge plugin) ----------------------------
+
+static void on_monitor_signal(GDBusConnection *c, const gchar *sender, const gchar *path,
+                              const gchar *iface, const gchar *signal, GVariant *params,
+                              gpointer data) {
+  (void)c; (void)sender; (void)path; (void)iface; (void)data;
+  if (!strcmp(signal, "MonitorButton")) {
+    guint32 button, mods;
+    gboolean pressed;
+    gdouble x, y;
+    g_variant_get(params, "(ubddu)", &button, &pressed, &x, &y, &mods);
+    printf("button %u %d %.2f %.2f %u\n", button, pressed, x, y, mods);
+  } else if (!strcmp(signal, "MonitorMotion")) {
+    gdouble x, y;
+    guint32 buttons, mods;
+    g_variant_get(params, "(dduu)", &x, &y, &buttons, &mods);
+    printf("motion %.2f %.2f %u %u\n", x, y, buttons, mods);
+  } else if (!strcmp(signal, "MonitorAxis")) {
+    gboolean vertical;
+    gdouble delta, x, y;
+    gint32 v120;
+    guint32 mods;
+    g_variant_get(params, "(bdiddu)", &vertical, &delta, &v120, &x, &y, &mods);
+    printf("axis %c %.3f %d %.2f %.2f %u\n", vertical ? 'v' : 'h', delta, v120, x, y, mods);
+  } else if (!strcmp(signal, "MonitorKey")) {
+    guint32 scan, keysym, mods;
+    gboolean pressed, repeat;
+    const gchar *text;
+    g_variant_get(params, "(uubbu&s)", &scan, &keysym, &pressed, &repeat, &mods, &text);
+    // Text as hex UTF-8 so the line stays parseable
+    printf("key %u %u %d %d %u ", scan, keysym, pressed, repeat, mods);
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++) printf("%02x", *p);
+    printf("%s\n", *text ? "" : "-");
+  } else {
+    return;
+  }
+  fflush(stdout);
+}
+
+static gboolean on_stdin_hup(GIOChannel *channel, GIOCondition condition, gpointer loop) {
+  (void)channel; (void)condition;
+  g_main_loop_quit(loop);
+  return FALSE;
+}
+
+int kq_monitor(void) {
+  GDBusConnection *connection = bus();
+  if (!connection) return -1;
+  g_dbus_connection_signal_subscribe(connection, "org.autokey.KWinBridge",
+                                     "org.autokey.KWinBridge", NULL, "/AutoKeyBridge", NULL,
+                                     G_DBUS_SIGNAL_FLAGS_NONE, on_monitor_signal, NULL, NULL);
+  GError *error = NULL;
+  GVariant *r = g_dbus_connection_call_sync(connection, "org.autokey.KWinBridge", "/AutoKeyBridge",
+                                            "org.autokey.KWinBridge", "StartMonitor", NULL, NULL,
+                                            G_DBUS_CALL_FLAGS_NONE, 2000, NULL, &error);
+  if (!r) {
+    fprintf(stderr, "kwin-input: the AutoKey KWin bridge plugin is not loaded: %s\n", error->message);
+    g_error_free(error);
+    return -1;
+  }
+  g_variant_unref(r);
+  printf("ready\n");
+  fflush(stdout);
+  GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+  // Stop when the parent closes our stdin (if it is a pipe)
+  GIOChannel *in = g_io_channel_unix_new(0);
+  g_io_add_watch(in, G_IO_HUP | G_IO_ERR | G_IO_NVAL, on_stdin_hup, loop);
+  g_main_loop_run(loop);
+  return 0;
+}

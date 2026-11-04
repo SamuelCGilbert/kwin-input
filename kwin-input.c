@@ -21,6 +21,10 @@
 //                       raw BGRA written to FILE, prints "width height stride format"
 //   pointer             prints the pointer position "x y" (logical)
 //   outputs             prints "name x y w h scale;..." (logical)
+//   monitor             print the user's real input until stdin closes, one line each:
+//                       button EVDEV PRESSED X Y MODS | motion X Y BUTTONS MODS |
+//                       axis v|h DELTA V120 X Y MODS | key SCAN KEYSYM PRESSED REPEAT MODS HEXTEXT
+//                       (needs the AutoKey KWin bridge plugin; logical coordinates)
 //   -                   read commands from stdin, one per line (prints "ok")
 #define _GNU_SOURCE
 #include <ctype.h>
@@ -314,6 +318,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "kwin-input: no command (see --help)\n");
     return 2;
   }
+
+  if (!strcmp(argv[i], "monitor")) return kq_monitor() == 0 ? 0 : 1;
 
   display = wl_display_connect(NULL);
   if (!display) {

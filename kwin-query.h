@@ -8,3 +8,5 @@ int kq_capture(int x, int y, int w, int h, const char *path, char *reply, size_t
 int kq_pointer(char *reply, size_t reply_len);
 // reply: "name x y w h scale;..." (logical)
 int kq_outputs(char *reply, size_t reply_len);
+// Print the user's real input events (needs the AutoKey KWin bridge plugin)
+int kq_monitor(void);
