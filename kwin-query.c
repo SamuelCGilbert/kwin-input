@@ -283,3 +283,17 @@ int kq_monitor(void) {
   g_main_loop_run(loop);
   return 0;
 }
+
+static void bridge_call(const char *method) {
+  GDBusConnection *connection = bus();
+  if (!connection) return;
+  GError *error = NULL;
+  GVariant *r = g_dbus_connection_call_sync(connection, "org.autokey.KWinBridge", "/AutoKeyBridge",
+                                            "org.autokey.KWinBridge", method, NULL, NULL,
+                                            G_DBUS_CALL_FLAGS_NO_AUTO_START, 2000, NULL, &error);
+  if (r) g_variant_unref(r);
+  else g_error_free(error); // no bridge plugin: nothing to do
+}
+
+void kq_clear_modifiers(void) { bridge_call("ClearModifiers"); }
+void kq_restore_modifiers(void) { bridge_call("RestoreModifiers"); }

@@ -7,6 +7,8 @@
 // an Exec= line that points at this binary.
 //
 // Usage: kwin-input [--clearmodifiers] [--delay MS] COMMAND [ARGS] [COMMAND...]
+//   --clearmodifiers    release the modifiers the user holds while running (real
+//                       keyboards need the AutoKey KWin bridge plugin)
 //   key COMBO...        press and release, e.g. ctrl+shift+Tab, Escape, super
 //   keydown COMBO       press only
 //   keyup COMBO         release only
@@ -337,7 +339,12 @@ int main(int argc, char **argv) {
     return 1;
   }
   org_kde_kwin_fake_input_authenticate(fake, "kwin-input", "Send keyboard and mouse input");
-  if (clear) clear_modifiers();
+  if (clear) {
+    // Fake input can only release what it pressed itself; the keys held on the
+    // real keyboard (e.g. the shortcut that started us) go through the bridge.
+    kq_clear_modifiers();
+    clear_modifiers();
+  }
 
   int status = 0;
   if (!strcmp(argv[i], "-")) {
@@ -365,6 +372,10 @@ int main(int argc, char **argv) {
       if (reply_buf[0]) { printf("%s\n", reply_buf); reply_buf[0] = '\0'; }
       i += used;
     }
+  }
+  if (clear) {
+    wl_display_roundtrip(display); // our keys first, then the modifiers again
+    kq_restore_modifiers();
   }
   if (fake_version >= 5) org_kde_kwin_fake_input_destroy(fake);
   wl_display_roundtrip(display);

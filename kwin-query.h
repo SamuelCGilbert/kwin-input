@@ -10,3 +10,7 @@ int kq_pointer(char *reply, size_t reply_len);
 int kq_outputs(char *reply, size_t reply_len);
 // Print the user's real input events (needs the AutoKey KWin bridge plugin)
 int kq_monitor(void);
+// Release / re-press the modifiers the user holds on real keyboards (needs the
+// AutoKey KWin bridge plugin; does nothing without it)
+void kq_clear_modifiers(void);
+void kq_restore_modifiers(void);
