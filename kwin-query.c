@@ -213,6 +213,43 @@ int kq_outputs(char *reply, size_t reply_len) {
   return 0;
 }
 
+int kq_windows(char *reply, size_t reply_len) {
+  char *r = run_script(
+      "function clean(s) { return String(s).replace(/[\\t\\n\\r\\x1e]/g, ' '); }\n"
+      "reply(workspace.stackingOrder.filter(function (w) { return w.normalWindow || w.dialog; })"
+      ".map(function (w) { return [w.internalId, w.pid, Math.round(w.x), Math.round(w.y), "
+      "Math.round(w.width), Math.round(w.height), (w.active ? 'a' : '') + (w.minimized ? 'm' : '') + "
+      "(w.onAllDesktops || w.desktops.indexOf(workspace.currentDesktop) !== -1 ? 'c' : ''), "
+      "clean(w.resourceClass), clean(w.caption)].join('\\t'); }).join('\\x1e'));");
+  if (!r) return -1;
+  snprintf(reply, reply_len, "%s", r);
+  g_free(r);
+  return 0;
+}
+
+int kq_activate(const char *id) {
+  for (const char *p = id; *p; p++) {
+    if (!g_ascii_isxdigit(*p) && *p != '{' && *p != '}' && *p != '-') {
+      fprintf(stderr, "kwin-input: bad window id '%s'\n", id);
+      return -1;
+    }
+  }
+  char *body = g_strdup_printf(
+      "var list = workspace.windowList(), found = 0;\n"
+      "for (var i = 0; i < list.length; i++) {\n"
+      "  if (String(list[i].internalId) === '%s') {\n"
+      "    list[i].minimized = false; workspace.activeWindow = list[i]; found = 1;\n"
+      "  }\n"
+      "}\n"
+      "reply(found);", id);
+  char *r = run_script(body);
+  g_free(body);
+  int status = r && !strcmp(r, "1") ? 0 : -1;
+  if (status != 0) fprintf(stderr, "kwin-input: no window '%s'\n", id);
+  g_free(r);
+  return status;
+}
+
 // --- Input monitor (AutoKey KWin bridge plugin) ----------------------------
 
 static void on_monitor_signal(GDBusConnection *c, const gchar *sender, const gchar *path,

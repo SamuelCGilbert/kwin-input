@@ -23,6 +23,10 @@
 //                       raw BGRA written to FILE, prints "width height stride format"
 //   pointer             prints the pointer position "x y" (logical)
 //   outputs             prints "name x y w h scale;..." (logical)
+//   windows             prints the windows, bottom to top, separated by \x1e. Fields
+//                       are tab separated: id pid x y w h flags class title, in logical
+//                       coordinates. flags has a=active m=minimized c=on the current desktop
+//   activate ID         raise and focus the window with that id
 //   monitor             print the user's real input until stdin closes, one line each:
 //                       button EVDEV PRESSED X Y MODS | motion X Y BUTTONS MODS |
 //                       axis v|h DELTA V120 X Y MODS | key SCAN KEYSYM PRESSED REPEAT MODS HEXTEXT
@@ -48,7 +52,7 @@ static struct org_kde_kwin_fake_input *fake;
 static uint32_t fake_version;
 static struct wl_display *display;
 static int delay_ms = 2;
-static char reply_buf[8192];  // data returned by query commands
+static char reply_buf[1 << 16];  // data returned by query commands
 
 static void sleep_ms(int ms) {
   if (ms <= 0) return;
@@ -206,7 +210,7 @@ static bool button(const char *name, bool press, bool release) {
 static bool is_command(const char *s) {
   static const char *cmds[] = {"key",  "keydown", "keyup",  "type",    "click",   "mousedown",
                                "mouseup", "move", "moveby", "scroll", "sleep", "capture",
-                               "pointer", "outputs"};
+                               "pointer", "outputs", "windows", "activate"};
   for (size_t i = 0; i < sizeof cmds / sizeof *cmds; i++)
     if (!strcmp(s, cmds[i])) return true;
   return false;
@@ -275,6 +279,11 @@ static int run(int argc, char **args) {
   }
   if (!strcmp(cmd, "pointer")) return kq_pointer(reply_buf, sizeof reply_buf) == 0 ? 1 : -1;
   if (!strcmp(cmd, "outputs")) return kq_outputs(reply_buf, sizeof reply_buf) == 0 ? 1 : -1;
+  if (!strcmp(cmd, "windows")) return kq_windows(reply_buf, sizeof reply_buf) == 0 ? 1 : -1;
+  if (!strcmp(cmd, "activate")) {
+    NEED(1);
+    return kq_activate(args[1]) == 0 ? 2 : -1;
+  }
   fprintf(stderr, "kwin-input: unknown command '%s'\n", cmd);
   return -1;
 }
