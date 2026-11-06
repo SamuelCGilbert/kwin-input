@@ -50,7 +50,7 @@ action. The comment at the top of `kwin-input.c` lists every command.
 
 `monitor` (reads your real input, for recorders) and `--clearmodifiers` for keys
 you physically hold need the
-[AutoKey KWin bridge](https://github.com/TheSquanch-147/autokey-kwin-bridge) plugin.
+[AutoKey KWin bridge](https://github.com/SamuelCGilbert/autokey-kwin-bridge) plugin.
 
 ## Limits
 
