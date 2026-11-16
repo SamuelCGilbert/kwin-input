@@ -54,7 +54,7 @@ you physically hold need the
 
 ## Limits
 
-- Only KDE Plasma. Tested on Plasma 6.7.5.
+- Only KDE Plasma 6. Tested on Plasma 6.8 (Wayland).
 - `type` only types characters that exist in the active keyboard layout.
 - Coordinates are logical, not physical pixels.
 
