@@ -18,6 +18,17 @@ KWin only trusts executables listed in a `.desktop` file with the matching
 see it. No permission prompt appears, so any program that can run `kwin-input`
 can see your screen and type for you.
 
+## Install
+
+Download the package for your system from the
+[latest release](https://github.com/SamuelCGilbert/kwin-input/releases/latest),
+install it, then log out and back in:
+
+```sh
+sudo apt install ./kwin-input_*_amd64.deb      # Ubuntu 24.04 or newer, KDE neon, Debian 13
+sudo dnf install ./kwin-input-*.x86_64.rpm     # Fedora 43 or newer
+```
+
 ## Build and install
 
 Needs `libwayland-dev`, `libwayland-bin` (`wayland-scanner`), `libxkbcommon-dev`
@@ -27,6 +38,11 @@ and `libglib2.0-dev`.
 make
 make install   # into ~/.local/opt/kwin-input, PREFIX=... to change
 ```
+
+`make install` also writes `~/.local/share/applications/kwin-input.desktop`
+(`APPDIR=...` to change). If you install the package too, delete that file,
+because it hides the package's own and KWin then only trusts the copy in
+`~/.local/opt`.
 
 The `.desktop` file goes to `~/.local/share/applications`.
 

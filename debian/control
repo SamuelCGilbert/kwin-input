@@ -1,0 +1,22 @@
+Source: kwin-input
+Section: utils
+Priority: optional
+Maintainer: Sam Gilbert <86975269+SamuelCGilbert@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               libglib2.0-dev,
+               libwayland-bin,
+               libwayland-dev,
+               libxkbcommon-dev,
+               pkgconf
+Standards-Version: 4.6.2
+Homepage: https://github.com/SamuelCGilbert/kwin-input
+Rules-Requires-Root: no
+
+Package: kwin-input
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: send input and take screenshots on KDE Plasma Wayland
+ Sends keyboard and mouse input and takes screenshots on KDE Plasma (Wayland)
+ from the command line or another program, without root or uinput. KWin
+ trusts it through the installed .desktop file, so any program that can run
+ kwin-input can see the screen and type.

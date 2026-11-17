@@ -1,0 +1,85 @@
+# Builds the kwin-input packages.
+# Pushing a tag such as v1.0.0 builds them and publishes a release.
+# Running it by hand from the Actions tab only builds them.
+# The version in the packages comes from debian/changelog and rpm/kwin-input.spec.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  deb:
+    name: Build .deb (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends build-essential devscripts equivs
+          mk-build-deps -i -r -t "apt-get -y -qq --no-install-recommends" debian/control
+          dpkg-buildpackage -b -us -uc
+          mkdir out
+          mv ../kwin-input_*.deb out/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb
+          path: out/*.deb
+
+  rpm:
+    name: Build .rpm (Fedora 43)
+    runs-on: ubuntu-24.04
+    container: fedora:43
+    steps:
+      - name: Install build tools
+        run: dnf install -y rpm-build tar 'dnf-command(builddep)'
+
+      - uses: actions/checkout@v6
+        with:
+          path: kwin-input
+
+      - name: Build
+        run: |
+          dnf builddep -y kwin-input/rpm/kwin-input.spec
+          version=$(rpmspec -q --qf '%{version}\n' kwin-input/rpm/kwin-input.spec | head -1)
+          mkdir -p ~/rpmbuild/SOURCES out
+          tar -czf ~/rpmbuild/SOURCES/kwin-input.tar.gz --transform "s/^kwin-input/kwin-input-$version/" --exclude=.git kwin-input
+          rpmbuild -bb kwin-input/rpm/kwin-input.spec
+          mv ~/rpmbuild/RPMS/x86_64/kwin-input-[0-9]*.rpm out/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm
+          path: out/*.rpm
+
+  release:
+    name: Publish release
+    if: github.ref_type == 'tag'
+    needs: [deb, rpm]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+
+      - name: Create the release and upload the packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          sha256sum kwin-input* > SHA256SUMS
+          gh release view "$TAG" >/dev/null 2>&1 ||
+            gh release create "$TAG" --verify-tag --title "kwin-input ${TAG#v}" \
+              --notes "Packages for KDE Plasma 6 (Wayland). See the README for how to install them."
+          gh release upload "$TAG" kwin-input* SHA256SUMS --clobber

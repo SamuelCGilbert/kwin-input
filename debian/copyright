@@ -1,0 +1,13 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kwin-input
+Source: https://github.com/SamuelCGilbert/kwin-input
+
+Files: *
+Copyright: 2026 Sam Gilbert
+License: GPL-3.0-or-later
+ On Debian systems, the full text is in /usr/share/common-licenses/GPL-3.
+
+Files: fake-input.xml
+Copyright: 2015 Martin Gräßlin
+License: LGPL-2.1-or-later
+ On Debian systems, the full text is in /usr/share/common-licenses/LGPL-2.1.
